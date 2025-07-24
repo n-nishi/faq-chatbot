@@ -12,7 +12,8 @@ const ChatBot = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/categories");
+        const res = await axios.get("https://faq-chatbot-backend-gdfo.onrender.com/categories");
+
         setCategories(res.data.categories || []);
         //デフォルト未選択にするためコメントアウト
         //if (res.data.categories.length > 0) {
@@ -32,7 +33,7 @@ const ChatBot = () => {
     setInput("");
 
     try {
-      const res = await axios.post("http://localhost:8000/ask", {
+      const res = await axios.post("https://faq-chatbot-backend-gdfo.onrender.com/ask", {
         message: input,
         category: category
       });
