@@ -61,7 +61,10 @@ const ChatBot = () => {
       <div className="border rounded p-2 h-96 overflow-y-scroll mb-2 bg-white">
         {messages.map((msg, idx) => (
           <div key={idx} className={`text-${msg.type === "user" ? "right" : "left"} my-1`}>
-            <span className={`inline-block px-2 py-1 rounded ${msg.type === "user" ? "bg-blue-100" : "bg-gray-200"}`}>
+            <span
+                className={`inline-block px-2 py-1 rounded ${msg.type === "user" ? "bg-blue-100" : "bg-gray-200"}`}
+                style={{ whiteSpace: "pre-line" }}
+            >
               {msg.text}
             </span>
           </div>
