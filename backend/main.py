@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
 from fuzzywuzzy import fuzz
+import openai
+import os
+
+# OpenAIのAPIキーを環境変数などから設定（推奨）
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # CSVファイルを読み込む
 CSV_FILE = "FAQ検索データ.csv"
@@ -48,6 +53,23 @@ async def get_categories():
         print(f"カテゴリ取得エラー: {e}")
         raise HTTPException(status_code=500, detail="カテゴリ読み込みに失敗しました")
 
+# ChatGPT に問い合わせる関数（補完用）
+def ask_chatgpt(prompt: str) -> str:
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # または gpt-3.5-turbo
+            messages=[
+                {"role": "system", "content": "あなたはFAQ対応のチャットボットです。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500,
+        )
+        return response.choices[0].message["content"].strip()
+    except Exception as e:
+        print(f"OpenAIエラー: {e}")
+        return "OpenAIでの回答取得に失敗しました。"
+
 # 質問を処理
 @app.post("/ask")
 async def ask_faq(req: QuestionRequest):
@@ -89,7 +111,9 @@ async def ask_faq(req: QuestionRequest):
         if best_match is not None and best_score >= 60:
             return {"answer": best_match["answer"]}
         else:
-            return {"answer": "該当するFAQが見つかりませんでした。"}
+            # OpenAIで補完回答
+            gpt_reply = ask_chatgpt(f"ユーザーからの質問: {msg}")
+            return {"answer": gpt_reply}
 
     except Exception as e:
         print(f"検索エラー: {e}")
