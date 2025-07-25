@@ -13,7 +13,6 @@ const ChatBot = () => {
     const fetchCategories = async () => {
       try {
         const res = await axios.get("https://faq-chatbot-backend-gdfo.onrender.com/categories");
-
         setCategories(res.data.categories || []);
         //デフォルト未選択にするためコメントアウト
         //if (res.data.categories.length > 0) {
