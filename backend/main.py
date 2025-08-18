@@ -6,7 +6,10 @@ from fuzzywuzzy import fuzz
 import openai
 import os
 
-# OpenAIのAPIキーを環境変数などから設定（推奨）
+from dotenv import load_dotenv
+load_dotenv()
+
+# OpenAIのAPIキーを環境変数から設定
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # CSVファイルを読み込む
