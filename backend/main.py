@@ -1,42 +1,37 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from chat import get_answer_from_faq_or_chatgpt
 from dotenv import load_dotenv
 import os
 
-from chat import get_categories_from_csv, get_answer_from_faq
-
+# 環境変数読み込み
 load_dotenv()
 
+# FastAPIアプリケーションの初期化
 app = FastAPI()
 
+# CORS設定（必要に応じてドメイン制限も可能）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://faq-chatbot-frontend.onrender.com"],
+    allow_origins=["*"],  # フロントエンドと連携するドメインに限定するのが理想
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-class QuestionRequest(BaseModel):
-    message: str
-    category: str
+# リクエストボディ用のデータモデル
+class ChatRequest(BaseModel):
+    msg: str
 
+# ルート確認用
 @app.get("/")
-def read_root():
-    return {"message": "FAQチャットボットのバックエンドが起動中です"}
+async def root():
+    return {"message": "FAQ Chatbot API is running."}
 
-@app.get("/categories")
-def get_categories():
-    try:
-        return {"categories": get_categories_from_csv()}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/ask")
-def ask_faq(req: QuestionRequest):
-    try:
-        answer = get_answer_from_faq(req.message, req.category)
-        return {"answer": answer}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# チャット用のエンドポイント
+@app.post("/chat")
+async def chat_endpoint(request: ChatRequest):
+    user_msg = request.msg
+    answer = get_answer_from_faq_or_chatgpt(user_msg)
+    return {"response": answer}
