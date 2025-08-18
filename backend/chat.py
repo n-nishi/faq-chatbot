@@ -12,7 +12,7 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # FAQデータの読み込み（必要に応じてパス修正）
-faq_data = pd.read_csv("FAQ検索データ.csv")
+faq_data = pd.read_csv("FAQ検索データ.csv", encoding="cp932")
 
 
 def search_faq(user_input: str) -> dict:
