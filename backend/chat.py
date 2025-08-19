@@ -46,6 +46,11 @@ def get_all_categories():
 
 # 質問に対するFAQまたはChatGPTからの回答取得
 def get_answer_from_faq_or_chatgpt(message: str, category: str = "") -> str:
+
+    print(f"[DEBUG] ユーザー入力: {message}")
+    print(f"[DEBUG] 選択カテゴリ: {category}")
+    print(f"[DEBUG] FAQ件数: {len(df)}")
+
     df = load_faq_data()
     if df.empty:
         return "FAQデータの読み込みに失敗しました。"
