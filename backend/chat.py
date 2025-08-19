@@ -12,7 +12,7 @@ CSV_FILE = "FAQ検索データ.csv"
 # FAQデータ読み込み関数
 def load_faq_data():
     try:
-        df = pd.read_csv(CSV_FILE, encoding="cp932")
+        df = pd.read_csv(CSV_FILE, encoding="utf-8")
         return df[df["up_check"] == True]
     except Exception as e:
         print(f"FAQデータ読み込みエラー: {e}")
