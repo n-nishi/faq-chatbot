@@ -1,76 +1,67 @@
-import os
 import pandas as pd
-from dotenv import load_dotenv
 from fuzzywuzzy import fuzz
-from openai import OpenAI
-from typing import Optional
+import openai
+import os
 
-# 環境変数の読み込み
-load_dotenv()
+# OpenAIキー読み込み（環境変数）
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# OpenAIクライアント初期化
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+CSV_FILE = "FAQ検索データ.csv"
 
-# FAQデータの読み込み（必要に応じてパス修正）
-faq_data = pd.read_csv("FAQ検索データ.csv", encoding="cp932")
+# カテゴリ抽出
+def get_all_categories():
+    df = pd.read_csv(CSV_FILE, encoding="cp932")
+    df = df[df["up_check"] == True]
+    category_series = df["カテゴリ"].dropna().apply(
+        lambda x: [c.strip() for c in str(x).splitlines()]
+    )
+    all_categories = set(cat for sublist in category_series for cat in sublist)
+    return sorted(all_categories)
 
+# ChatGPT補完関数
+def ask_chatgpt(prompt: str) -> str:
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # 必要に応じて変更
+            messages=[
+                {"role": "system", "content": "あなたはFAQ対応のチャットボットです。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500,
+        )
+        return response.choices[0].message["content"].strip()
+    except Exception as e:
+        print(f"OpenAIエラー: {e}")
+        return "OpenAIでの回答取得に失敗しました。"
 
-def search_faq(user_input: str) -> dict:
-    """
-    FAQの中からユーザーの質問に最も近いものを検索する
-    """
+# 回答ロジック本体
+def get_answer(user_message: str, selected_category: str) -> str:
+    df = pd.read_csv(CSV_FILE, encoding="cp932")
+    df = df[df["up_check"] == True]
+
+    # カテゴリで絞り込み（なければ全件対象）
+    if selected_category:
+        def match_category(cell):
+            if pd.isna(cell):
+                return False
+            categories = [c.strip() for c in str(cell).splitlines()]
+            return selected_category in categories
+        df = df[df["カテゴリ"].apply(match_category)]
+
     best_score = 0
     best_match = None
 
-    for _, row in faq_data.iterrows():
-        question = str(row["question"])
-        score = fuzz.token_sort_ratio(user_input, question)  # 語順の違いに強い比較
-
+    for _, row in df.iterrows():
+        question = str(row["question"]) if pd.notna(row["question"]) else ""
+        note = str(row["note"]) if pd.notna(row["note"]) else ""
+        score = max(fuzz.partial_ratio(user_message, question),
+                    fuzz.partial_ratio(user_message, note))
         if score > best_score:
             best_score = score
             best_match = row
 
-    return {"score": best_score, "answer": best_match["answer"] if best_match is not None else None}
-
-
-def ask_chatgpt(msg: str) -> str:
-    """
-    OpenAI ChatGPT に質問を投げる
-    """
-    prompt = f"""
-あなたはFAQ対応専用のAIです。
-曖昧な質問に対しても、過去のFAQを想定しながら、分かりやすく簡潔に日本語で答えてください。
-
-【質問】
-{msg}
-
-※回答が不明な場合は「申し訳ありませんが、その件については分かりません」と返答してください。
-"""
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "あなたはFAQ対応に特化したアシスタントです。"},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.5,
-            max_tokens=500
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"ChatGPTとの通信中にエラーが発生しました: {e}"
-
-
-def get_answer_from_faq_or_chatgpt(user_input: str) -> str:
-    """
-    FAQから回答を取得し、信頼度が低ければChatGPTに委ねる
-    """
-    result = search_faq(user_input)
-    score = result["score"]
-    answer = result["answer"]
-
-    if score >= 75:
-        return f"【FAQより回答】\n{answer}"
+    if best_match is not None and best_score >= 60:
+        return best_match["answer"]
     else:
-        return f"【ChatGPTによる推測回答】\n{ask_chatgpt(user_input)}"
+        return ask_chatgpt(f"ユーザーからの質問: {user_message}")
