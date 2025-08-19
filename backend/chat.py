@@ -1,10 +1,11 @@
 import os
 import pandas as pd
 from fuzzywuzzy import fuzz
-import openai
+from openai import OpenAI
+from openai import OpenAIError
 
 # OpenAI APIキーの設定
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # FAQデータのCSVパス
 CSV_FILE = "FAQ検索データ.csv"
@@ -15,13 +16,13 @@ def load_faq_data():
         df = pd.read_csv(CSV_FILE, encoding="utf-8")
         return df[df["up_check"] == True]
     except Exception as e:
-        print(f"FAQデータ読み込みエラー: {e}")
+        print(f"[ERROR] FAQデータ読み込みエラー: {e}")
         return pd.DataFrame()
 
-# ChatGPTから補完回答を取得
+# ChatGPTから補完回答を取得（新SDK対応）
 def ask_chatgpt(prompt: str) -> str:
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "あなたはFAQ対応のチャットボットです。"},
@@ -30,9 +31,9 @@ def ask_chatgpt(prompt: str) -> str:
             temperature=0.7,
             max_tokens=500,
         )
-        return response.choices[0].message["content"].strip()
-    except Exception as e:
-        print(f"ChatGPTエラー: {e}")
+        return response.choices[0].message.content.strip()
+    except OpenAIError as e:
+        print(f"[ERROR] ChatGPTエラー: {e}")
         return "OpenAIでの回答取得に失敗しました。"
 
 # カテゴリ一覧取得
