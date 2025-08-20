@@ -7,6 +7,22 @@ from openai import OpenAIError
 # OpenAI APIキーの設定
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
+# ★ 一時的にアクセス可能なモデル一覧をリストアップ（ログ出力）
+def list_available_models():
+    try:
+        models = client.models.list()
+        print("\n=== 利用可能なモデル一覧 ===")
+        for model in models.data:
+            print(model.id)
+        print("===========================\n")
+    except Exception as e:
+        print(f"[ERROR] モデル一覧取得エラー: {e}")
+
+list_available_models()
+
+
+
 # FAQデータのCSVパス
 CSV_FILE = "FAQ検索データ.csv"
 
